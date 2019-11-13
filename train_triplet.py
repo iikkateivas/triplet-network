@@ -14,8 +14,8 @@ from keras.layers import Activation, concatenate
 from keras.layers import Input, Lambda, Dense, Dropout, Conv2D, MaxPooling2D, Flatten
 from keras.models import Sequential, Model
 
-from base_cnn import get_base_cnn_2, get_output_dim_2
-output_dim = get_output_dim_2()
+from base_cnn import get_base_vgg16
+output_dim = 512
 
 def triplet_loss(y_true, y_pred, alpha = 0.4):
     """
@@ -76,37 +76,61 @@ def build_triplet_network(base_model, input_dim, opt):
 
 '''Load data in size (samples, 3, 1, y, x)'''
 
-X = np.load('triplet_data_75.npy') # load here
-X = X[:150000]
-# suffle the data with train_test_split
-x_train, x_test = train_test_split(X, test_size=.0001)
-del X
-
-x_train = np.true_divide(x_train, 255, dtype=np.float32)
+#X = np.load('triplet_data_75.npy') # load here
+#X = X[:150000]
+## suffle the data with train_test_split
+#x_train, x_test = train_test_split(X, test_size=.0001)
+#del X
+#
+#x_train = np.true_divide(x_train, 255, dtype=np.float32)
 
 # get input dimensions
-in_dims = x_train.shape[2:]
+in_dims = (200, 200, 3)
 # build base model of choosing
-base_model = get_base_cnn_2(in_dims)
+base_model = get_base_vgg16()
 '''Check for Dense layer input info'''
 print(base_model.layers[-6].output)
 # build triplet model for training
 model = build_triplet_network(base_model, in_dims, Adam())
 
 # create y_dummie for the keras fit function
-y_dummie = np.zeros(len(x_train))
+#y_dummie = np.zeros(len(x_train))
+#
+##model.layers[3].load_weights('weights/face_triplet_face_1.h5')
+## Train the model
+#epochs = 100
+#model.fit([x_train[:, 0], x_train[:, 1] , x_train[:, 2]], y_dummie, batch_size=512, verbose=1, epochs=epochs)
+## create weights folder if not existing
+#if not os.path.exists('weights'):
+#    os.makedirs('weights')
+## save weights
+#model.layers[3].save_weights('weights/triplet_75_2.h5')
 
-#model.layers[3].load_weights('weights/face_triplet_face_1.h5')
-# Train the model
-epochs = 100
-model.fit([x_train[:, 0], x_train[:, 1] , x_train[:, 2]], y_dummie, batch_size=512, verbose=1, epochs=epochs)
-# create weights folder if not existing
-if not os.path.exists('weights'):
-    os.makedirs('weights')
-# save weights
-model.layers[3].save_weights('weights/triplet_75_2.h5')
+def generate_batches(files, batch_size):
+    while 1:
+        for d in datasets:
+#            print('Loading data batch...')
+            x_part = np.load(d)   
+            
+            x_train, x_test = train_test_split(x_part, test_size=.0001)
+            del x_part
+#            print('Normalizing...')
+            x_train = np.divide(x_train[:15000], 255, dtype=np.float32)
+#            print('Done')
+            batches = int(len(x_train) / batch_size)
+            
+            for i in range(batches):
+                x = x_train[i*batch_size:(i+1)*batch_size]
+                y_dummie = np.zeros(len(x))
+                yield ([x[:, 0], x[:, 1] , x[:, 2]], y_dummie)
+       
 
-
+total_samples = 90000
+batch_size = 25
+steps = int(total_samples/batch_size)
+datasets = ['./train_batch_1.npy', './train_batch_2.npy', './train_batch_3.npy', './train_batch_4.npy', './train_batch_5.npy', './train_batch_6.npy']
+model.fit_generator(generate_batches(datasets, batch_size),
+        steps_per_epoch=steps, epochs=30)
 
 
 

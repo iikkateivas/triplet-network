@@ -8,6 +8,30 @@ from keras.layers import Activation, concatenate
 from keras.layers import Input, Lambda, Dense, Dropout, Conv2D, MaxPooling2D, Flatten
 from keras.models import Sequential, Model
 
+def get_base_vgg16():
+    from keras.applications.vgg16 import VGG16
+    ref_model = VGG16(include_top=False, weights='imagenet', input_shape=(200, 200, 3))
+    
+    # Create new model with narrower Dense layers at the end. No activation 
+    flatten = Flatten()(ref_model.layers[-1].output)
+    dense_1 = Dense(1024, activation='relu')(flatten)
+    dropout_1 = Dropout(0.2)(dense_1)
+    dense_2 = Dense(512)(dropout_1)
+    
+    return Model(ref_model.inputs, dense_2)
+
+def get_base_resnet50():
+    from keras.applications.resnet50 import ResNet50
+    ref_model = ResNet50(include_top=False, weights='imagenet', input_shape=(200, 200, 3))
+
+    # Create new model with Dense layer at the end. No activation
+    flatten = Flatten()(ref_model.layers[-1].output)
+    dense_1 = Dense(1024, activation='relu')(flatten)
+    dropout_1 = Dropout(0.2)(dense_1)
+    dense_2 = Dense(512)(dropout_1)
+    
+    return Model(ref_model.inputs, dense_2)
+
 output_dim_1 = 50
 
 def get_output_dim_1():
